@@ -4,13 +4,13 @@
  * @Author: hui.wang01
  * @Date: 2020-11-08 16:14:55
  * @LastEditors: hui.wang01
- * @LastEditTime: 2020-11-22 21:26:32
+ * @LastEditTime: 2020-11-24 20:33:25
  */
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
-Vue.use(VueRouter)
-
 import Layout from '@/layout/index.vue'
+import store from '@/store'
+Vue.use(VueRouter)
 const routes: Array<RouteConfig> = [
   {
     path: '/login',
@@ -20,11 +20,17 @@ const routes: Array<RouteConfig> = [
   {
     path: '/',
     component: Layout,
+    meta: { // 父路由写过了 requiresAuth ，子路由就可以不用写了
+      requiresAuth: true // 自定义数据
+    }, // meta 默认就是一个空对象，不写也行
     children: [
       {
         path: '',
-        name: 'home',  // 默认子路由
+        name: 'home', // 默认子路由
         component: () => import(/* webpackChunkName: 'home' */ '@/views/home/index.vue')
+        // meta: {
+        //   requiresAuth: true // 自定义数据
+        // } // meta 默认就是一个空对象，不写也行
       },
       {
         path: '/user',
@@ -51,16 +57,16 @@ const routes: Array<RouteConfig> = [
         name: 'menu',
         component: () => import(/* webpackChunkName: 'menu' */ '@/views/menu/index.vue')
       },
-    {
-      path: '/resource',
-      name: 'resource',
-      component: () => import(/* webpackChunkName: 'resource' */ '@/views/resource/index.vue')
-    },
-    {
-      path: '/course',
-      name: 'course',
-      component: () => import(/* webpackChunkName: 'course' */ '@/views/course/index.vue')
-    },
+      {
+        path: '/resource',
+        name: 'resource',
+        component: () => import(/* webpackChunkName: 'resource' */ '@/views/resource/index.vue')
+      },
+      {
+        path: '/course',
+        name: 'course',
+        component: () => import(/* webpackChunkName: 'course' */ '@/views/course/index.vue')
+      }
     ]
   },
   {
@@ -79,13 +85,24 @@ const router = new VueRouter({
 // from 从哪里来的路由信息
 // next 通行标志
 router.beforeEach((to, from, next) => {
-  console.log();
-
-  //路由守卫中一定要调用next, 否则页面无法展示
-  next()
-  if(to.path !== '/login'){
-    // 校验登录状态
-
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!store.state.user) { // 跳转到登录页面
+      next({
+        name: 'login',
+        query: {
+          redirectTo: to.fullPath
+        }
+      })
+    } else {
+      next() // 允许通过
+    }
+  } else {
+    next() // 允许通过
   }
+  // 路由守卫中一定要调用next, 否则页面无法展示
+  // next()
+  // if(to.path !== '/login'){
+  //   // 校验登录状态
+  // }
 })
 export default router

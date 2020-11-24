@@ -4,7 +4,7 @@
  * @Author: hui.wang01
  * @Date: 2020-11-22 15:39:27
  * @LastEditors: hui.wang01
- * @LastEditTime: 2020-11-22 21:15:34
+ * @LastEditTime: 2020-11-24 20:32:00
 -->
 <template>
   <div class="login">
@@ -38,8 +38,8 @@
 </template>
 <script lang="ts">
 import Vue from 'vue'
-import qs from 'qs'
-import request from '@/utils/request'
+// import qs from 'qs'
+// import request from '@/utils/request'
 import { login } from '@/services/user'
 import { Form } from 'element-ui'
 
@@ -86,15 +86,12 @@ export default Vue.extend({
           this.$message.error(data.message)
         } else {
           // 登录成功时，记录登录状态，状态需要能够全局访问（放到Vuex容器中）。
-          this.$store.commit('setUser',data.content);
+          this.$store.commit('setUser', data.content)
           // 然后在访问需要登录的页面的时候，判断有没有登录状态（路由拦截器）
           // 成功：跳转到首页
           this.$message.success('登录成功')
-          this.$router.push({
-            name: 'home'
-          })
+          this.$router.push(this.$route.query.redirectTo as string || '/')
         }
-
       } catch (err) {
         console.log('登录失败', err)
       }
