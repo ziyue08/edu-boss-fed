@@ -4,7 +4,7 @@
  * @Author: hui.wang01
  * @Date: 2020-11-09 20:43:02
  * @LastEditors: hui.wang01
- * @LastEditTime: 2020-11-26 01:44:30
+ * @LastEditTime: 2020-11-26 02:05:07
  */
 import axios from 'axios'
 import store from '@/store'
@@ -41,10 +41,22 @@ function redirectLogin () {
     }
   })
 }
+
+function refreshToken () {
+  return axios.create()({ // 创建一个新的 axios 实例发送请求，因为如果使用request会可能发生 401 死循环
+    method: 'POST',
+    url: '/front/user/refresh_token',
+    data: qs.stringify({
+      refreshtoken: store.state.user.refresh_token // refreshtoken只能使用一次
+    })
+  })
+}
 // 无痛刷新：先请求接口，如果是401，判断容器中是否有user，
 // 如果没有的话，直接进入登录页，
 // 如果有user，则请求refresh_token接口，然后重新设置接口的返回值给容器的user，再重新请求接口。
 
+let isRefreshing = false // 控制刷新 token 的状态
+let requests: any[] = []
 // 响应拦截器
 request.interceptors.response.use(function (response) { // 状态码为 2xx 都会进入这里
   console.log('请求响应成功了', response)
@@ -69,28 +81,38 @@ request.interceptors.response.use(function (response) { // 状态码为 2xx 都�
         redirectLogin()
         return Promise.reject(error)
       }
-      // 尝试刷新token
-      try {
-        const { data } = await axios.create()({
-          method: 'POST',
-          url: '/front/user/refresh_token',
-          data: qs.stringify({
-            refreshtoken: store.state.user.refresh_token
-          })
-        })
-        // 成功了->把本次失败的请求重新发出去
-        // 把成功刷新拿到的access_token更新到容器和本地存储中
-        store.commit('setUser', data.content)
-        // 把本地失败的请求重新发出去
-        return request(error.config)
-      } catch (err) {
-        // 把当前登录用户状态清除
-        store.commit('setUser', null)
+      if (!isRefreshing) { // 解决多次请求重新刷新 Token 的问题
+        isRefreshing = true
+        // 尝试刷新token
+        return refreshToken().then((res) => {
+          if (!res.data.success) {
+            throw new Error('刷新TOKEN失败')
+          }
 
-        // 失败了->直接跳转到登录页
-        redirectLogin()
-        return Promise.reject(error)
+          // 成功了->把本次失败的请求重新发出去
+          // 把成功刷新拿到的access_token更新到容器和本地存储中
+          store.commit('setUser', res.data.content)
+          // 把本地失败的请求重新发出去
+          requests.forEach(cb => cb())
+          requests = [] // 重置request数组
+          return request(error.config) // 失败请求的配置信
+        }).catch(err => {
+          // 把当前登录用户状态清除
+          store.commit('setUser', null)
+          // 失败了->直接跳转到登录页
+          redirectLogin()
+          return Promise.reject(err)
+        }).finally(() => {
+          isRefreshing = false // 重置状态
+        })
       }
+
+      // 刷新状态下，把请求挂起，放到 requests 数组中
+      return new Promise((resolve) => {
+        requests.push(() => {
+          resolve(request(error.config))
+        })
+      })
     } else if (status === 403) {
       Message.error('没有权限，请联系管理员')
     } else if (status === 404) {

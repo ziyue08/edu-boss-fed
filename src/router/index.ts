@@ -4,7 +4,7 @@
  * @Author: hui.wang01
  * @Date: 2020-11-08 16:14:55
  * @LastEditors: hui.wang01
- * @LastEditTime: 2020-11-24 20:33:25
+ * @LastEditTime: 2020-11-28 20:20:44
  */
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
@@ -66,6 +66,21 @@ const routes: Array<RouteConfig> = [
         path: '/course',
         name: 'course',
         component: () => import(/* webpackChunkName: 'course' */ '@/views/course/index.vue')
+      },
+      {
+        path: '/menu/create',
+        name: 'menu-create',
+        component: () => import(/* webpackChunkName: 'menu-creat-edit' */ '@/views/menu/create.vue')
+      },
+      {
+        path: '/menu/:id/edit',
+        name: 'menu-edit',
+        component: () => import(/* webpackChunkName: 'menu-creat-edit' */ '@/views/menu/edit.vue')
+      },
+      {
+        path: '/role/:rollId/alloc-menu',
+        name: 'alloc-menu',
+        component: () => import(/* webpackChunkName: 'alloc-menu' */ '@/views/role/alloc-menu.vue')
       }
     ]
   },
